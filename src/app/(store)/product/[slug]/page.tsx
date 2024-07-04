@@ -1,11 +1,40 @@
+import { api } from '@/data/api'
+import { Product } from '@/data/types/product'
+import { Metadata } from 'next'
 import Image from 'next/image'
 
-export default function Product() {
+interface ProductProps {
+  params: { slug: string }
+}
+
+async function getProduct(slug: string): Promise<Product> {
+  const response = await api(`/products/${slug}`, {
+    next: {
+      revalidate: 60 * 60, // 1 hour
+    },
+  })
+  const product = await response.json()
+  return product
+}
+
+export async function generateMetadata({
+  params,
+}: ProductProps): Promise<Metadata> {
+  const product = await getProduct(params.slug)
+
+  return {
+    title: product.title,
+  }
+}
+
+export default async function ProductPage({ params }: ProductProps) {
+  const product = await getProduct(params.slug)
+
   return (
     <div className="relative grid grid-cols-3 max-h-[860px]">
       <div className="col-span-2 overflow-hidden">
         <Image
-          src="/moletom-never-stop-learning.png"
+          src={product.image}
           alt=""
           width={1000}
           height={1000}
@@ -14,20 +43,27 @@ export default function Product() {
       </div>
 
       <div className="flex flex-col justify-center">
-        <h1 className="text-3xl font-bold leading-tight">
-          Moletom Never Stop Learning
-        </h1>
+        <h1 className="text-3xl font-bold leading-tight">{product.title}</h1>
 
         <p className="mt-2 leading-relaxed text-zinc-400">
-          Moletom fabricado com 88% de algodão e 12% de poliéster.
+          {product.description}
         </p>
 
         <div className="mt-8 flex items-center gap-3">
           <span className="rounded-full bg-violet-500 px-5 py-2.5 font-semibold">
-            R$99
+            {product.price.toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
+            })}
           </span>
           <span className="text-sm text-zinc-400">
-            Em 12x s/ juros de R$8,25
+            Em 12x s/ juros de{' '}
+            {(product.price / 12).toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+            })}
           </span>
         </div>
 
